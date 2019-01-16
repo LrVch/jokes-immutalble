@@ -1,0 +1,15 @@
+<div class="card joke mb-3">
+  <div class="card-body">
+    <div class="joke__action">
+      <span class="oi joke__action-item joke__action-fav"
+            [ngClass]="{'favorited': joke.favorited}"
+            data-glyph="star"
+            (click)="onFavorite()"></span>
+      <span class="oi joke__action-item joke__action-del"
+            data-glyph="trash"
+            (click)="onDelete()"></span>
+    </div>
+    <h5 class="card-title">{{ joke.title }}</h5>
+    <p class="card-text">{{ joke.body }}</p>
+  </div>
+</div>

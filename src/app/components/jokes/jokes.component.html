@@ -1,0 +1,15 @@
+<div *ngIf="hasFavorited">
+  <div class="bg-light p-3 border">
+    <h3>Favorited</h3>
+    <app-joke *ngFor="let joke of jokes | favoriteJokes: true; trackBy: trackById"
+              [joke]="joke"
+              (delete)="onDelete($event)"
+              (favorite)="onFavorite($event)"></app-joke>
+  </div>
+  <hr>
+</div>
+
+<app-joke *ngFor="let joke of jokes | favoriteJokes; trackBy: trackById"
+          [joke]="joke"
+          (delete)="onDelete($event)"
+          (favorite)="onFavorite($event)"></app-joke>

@@ -1,0 +1,15 @@
+.joke__action {
+    margin-top: -13px;
+    margin-right: -15px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.joke__action-item {
+    margin-left: 6px;
+    cursor: pointer;
+}
+
+.favorited {
+    color: #ffc107;
+}

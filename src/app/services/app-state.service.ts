@@ -1,45 +1,44 @@
 import { Injectable } from '@angular/core';
 import { Joke } from '../models/joke';
-import { Observable, Subject, merge, BehaviorSubject } from 'rxjs';
+import { Observable, Subject, merge } from 'rxjs';
 import { AppState } from '../models/appState';
-import { map, scan, startWith, pluck, tap } from 'rxjs/operators';
+import { map, scan, startWith, tap } from 'rxjs/operators';
 import { MapToState } from '../utils';
 import { LocalstorageService } from './localstorage.service';
+import { fromJS, Map } from 'immutable';
+
+export interface ImmutableAppState extends Map<string, any> { }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AppStateService {
-  private appState$: Observable<AppState>;
+  private appState$: Observable<ImmutableAppState>;
   private initialState: AppState;
-
-  prevState;
-
-  private previousStateSubject = new BehaviorSubject<AppState>({} as AppState);
 
   private addJokeSubject = new Subject<Joke>();
   private addJokeSubject$ = this.addJokeSubject.asObservable();
-  private addJoke$: Observable<MapToState<AppState>>;
+  private addJoke$: Observable<MapToState<ImmutableAppState>>;
 
   private removeJokeSubject = new Subject<Joke>();
   private removeJokeSubject$ = this.removeJokeSubject.asObservable();
-  private removeJoke$: Observable<MapToState<AppState>>;
+  private removeJoke$: Observable<MapToState<ImmutableAppState>>;
 
   private favoriteJokeSubject = new Subject<Joke>();
   private favoriteJokeSubject$ = this.favoriteJokeSubject.asObservable();
-  private favoriteJoke$: Observable<MapToState<AppState>>;
+  private favoriteJoke$: Observable<MapToState<ImmutableAppState>>;
 
   private unfavoriteJokeSubject = new Subject<Joke>();
   private unfavoriteJokeSubject$ = this.unfavoriteJokeSubject.asObservable();
-  private unfavoriteJoke$: Observable<MapToState<AppState>>;
+  private unfavoriteJoke$: Observable<MapToState<ImmutableAppState>>;
 
   private setdraftTitleSubject = new Subject<string>();
   private setdraftTitleSubject$ = this.setdraftTitleSubject.asObservable();
-  private setdraftTitle$: Observable<MapToState<AppState>>;
+  private setdraftTitle$: Observable<MapToState<ImmutableAppState>>;
 
   private setdraftBodySubject = new Subject<string>();
   private setdraftBodySubject$ = this.setdraftBodySubject.asObservable();
-  private setdraftBody$: Observable<MapToState<AppState>>;
+  private setdraftBody$: Observable<MapToState<ImmutableAppState>>;
 
   jokes$: Observable<Joke[]>;
   draftTitle$: Observable<string>;
@@ -55,45 +54,39 @@ export class AppStateService {
     };
 
     this.addJoke$ = this.addJokeSubject$.pipe(
-      map((joke: Joke) => (state: AppState) => ({
-        ...state,
-        jokes: [...state.jokes, joke]
-      })),
+      map((joke: Joke) =>
+        (state: ImmutableAppState) =>
+          state.set('jokes', state.get('jokes').push(Map({ ...joke })))
+      )
     );
 
     this.removeJoke$ = this.removeJokeSubject$.pipe(
-      map((joke: Joke) => (state: AppState) => ({
-        ...state,
-        jokes: state.jokes.filter(j => j.id !== joke.id)
-      }))
+      map((joke: Joke) =>
+        (state: ImmutableAppState) =>
+          state.set('jokes', state.get('jokes').filter(j => j.get('id') !== joke.id))
+      )
     );
 
     this.favoriteJoke$ = this.favoriteJokeSubject$.pipe(
-      map((joke: Joke) => (state: AppState) => ({
-        ...state,
-        jokes: state.jokes.map(j => j.id === joke.id ? { ...j, favorited: true } : j)
-      }))
+      map((joke: Joke) =>
+        (state: ImmutableAppState) =>
+          state.set('jokes', state.get('jokes').map(j => j.get('id') === joke.id ? j.set('favorited', true) : j))
+      )
     );
 
     this.unfavoriteJoke$ = this.unfavoriteJokeSubject$.pipe(
-      map((joke: Joke) => (state: AppState) => ({
-        ...state,
-        jokes: state.jokes.map(j => j.id !== joke.id ? j : { ...j, favorited: false })
-      }))
+      map((joke: Joke) =>
+        (state: ImmutableAppState) =>
+          state.set('jokes', state.get('jokes').map(j => j.get('id') === joke.id ? j.set('favorited', false) : j))
+      )
     );
 
     this.setdraftTitle$ = this.setdraftTitleSubject$.pipe(
-      map((title: string) => (state: AppState) => ({
-        ...state,
-        draftTitle: title
-      })),
+      map((title: string) => (state: ImmutableAppState) => state.set('draftTitle', title))
     );
 
     this.setdraftBody$ = this.setdraftBodySubject$.pipe(
-      map((body: string) => (state: AppState) => ({
-        ...state,
-        draftBody: body
-      }))
+      map((title: string) => (state: ImmutableAppState) => state.set('draftBody', title))
     );
 
     this.appState$ = merge(
@@ -104,24 +97,23 @@ export class AppStateService {
       this.setdraftTitle$,
       this.setdraftBody$
     ).pipe(
-      scan((state: AppState, changeFn: MapToState<AppState>) => changeFn(state), this.initialState),
-      startWith(this.initialState),
+      scan((state: AppState, changeFn: MapToState<AppState>) => changeFn(state), fromJS(this.initialState)),
+      startWith(fromJS(this.initialState)),
       // tap((state) => console.log('state', JSON.stringify(state, null, 4)))
     );
 
     this.jokes$ = this.appState$.pipe(
-      map(state => state.jokes),
+      map(state => state.get('jokes').toJS()),
       tap(jokes => this.localstorageService.setJokes(jokes))
     );
 
     this.draftTitle$ = this.appState$.pipe(
-      map(state => state.draftTitle)
+      map(state => state.get('draftTitle'))
     );
 
     this.draftBody$ = this.appState$.pipe(
-      map(state => state.draftBody),
+      map(state => state.get('draftBody'))
     );
-
   }
 
   addJoke(joke: Joke): void {
